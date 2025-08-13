@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ProfessionalProjectArchitecture.Core.DTOs;
+using ProfessionalProjectArchitecture.Core.Interfaces;
 
 namespace ProfessionalProjectArchitecture.API.Controllers
 {
@@ -7,16 +8,26 @@ namespace ProfessionalProjectArchitecture.API.Controllers
     [Route("api/[controller]")]
     public class ProductsController : ControllerBase
     {
-        [HttpGet]
-        public ActionResult<IEnumerable<ProductDto>> Get()
-        {
-            var products = new List<ProductDto>
-            {
-                new ProductDto { Name = "Laptop", Price = 999.99m },
-                new ProductDto { Name = "Smartphone", Price = 499.49m }
-            };
+        private readonly IProductService _service;
 
-            return Ok(products);
+        public ProductsController(IProductService service) => _service = service;
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll() => Ok(await _service.GetAllProductsAsync());
+
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var product = await _service.GetProductByIdAsync(id);
+            return product is null ? NotFound() : Ok(product);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] CreateProductDto dto)
+        {
+            // [ApiController] + FluentValidation => invalid model => 400 auto
+            var created = await _service.CreateProductAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
     }
 }
